@@ -32,11 +32,12 @@ pub struct HalState {
 ```
 
 Almost everything has a `back::` in it! And the most common, by far, is
-`back::Backend`. So our next step is to abstract it! If we look really carefully
-we can see that this type has a trait called `Backend`. So then, we can force
-our type parameter to have this traite this by adding a type parameter with a
-trait bound. This means the type can only be of the trait `Backend` which seems
-to be true for our use case. So then, the type signature of HalState is:
+`back::Backend`, so our next step is to abstract it. If we look through the type
+declaration in `gfx-hal`'s backend crates, we'll see that this type implements a
+trait called `Backend` and is used as such in our code. So then, we can force our
+type parameter to have this trait by adding a type parameter with a trait bound.
+This means the type parameter must implement the trait `Backend`, which seems to
+be the requirement for our use case. So then, the type signature of HalState is:
 
 ```rust
 struct HalState<B: Backend> { /* the fields, which will be generalized to B */ }
@@ -195,7 +196,7 @@ the compiler ends up throwing up somewhere in the mess and spews out a list of
 errors a mile long. Somewhere in there, there will be errors that look something
 like this:
 
-```rust
+```
 error[E0308]: try expression alternatives have incompatible types
    --> main.rs:some_line_number:some_character_number
     |
@@ -285,17 +286,13 @@ Now if you look carefully, you'll realize that all of this is actually defined b
 `I`! The type `B` is simply the associated type `I::Backend` and `D` is the
 associated type `I::Backend::Device`!
 
-Now if you want to ask why we went through all the steps above, it's mostly due
-to the fact that I (AlterionX) didn't pay clear attention to the many, many
-hints about this before.
-
-Anyways, we can now replace the really, really long typing with this:
+Anyways, we can now replace the really, really long type with this:
 
 ```rust
 struct HalState<I: Instance> { /* Fields go here */ }
 ```
 
-My goodness, but that is so much cleaner.
+Short and sweet, and so much cleaner.
 
 Well, that's great, but now it doesn't compile anymore! So we need to patch up
 two other sections of our code: the sections that use `B` or `D` now that we've
@@ -303,7 +300,13 @@ removed those type parameters and the parts we declare these type parameters.
 
 The `B` (since we've left the ` as Backend` parts from earlier) can be replaced
 with `I::Backend` and the `D`s from earlier can be replaced with `<I::Backend
-as Backend>::Device`.
+as Backend>::Device`. The impl of `HalState` becomes
+
+```rust
+impl <I: Instance> HalState<I> {
+  /* all the functions */
+}
+```
 
 ## Further enhancements
 
