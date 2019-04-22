@@ -398,19 +398,19 @@ pub struct HalState<I: Instance> {
 
 type TypedHalState = HalState<back::Instance>;
 impl TypedHalState {
-    pub fn typed_new(window: &Window) {
+    pub fn typed_new(window: &Window) -> Result<TypedHalState, &'static str> {
         // Create An Instance
         let instance = back::Instance::create(WINDOW_NAME, 1);
         // Create A Surface
-        let mut surface = instance.create_surface(window);
+        let surface = instance.create_surface(window);
         // Create A HalState
         TypedHalState::new(window, instance, surface)
     }
 }
 
-impl HalState {
+impl <I: Instance> HalState<I> {
   /// Creates a new, fully initialized HalState.
-  pub fn new(window: &Window, instance: I, surface: <I:: Backend as Backend>::Surface) -> Result<Self, &'static str> {
+  pub fn new(window: &Window, instance: I, mut surface: <I:: Backend as Backend>::Surface) -> Result<Self, &'static str> {
     // Select An Adapter
     let adapter = instance
       .enumerate_adapters()
@@ -729,7 +729,7 @@ impl HalState {
 
   #[allow(clippy::type_complexity)]
   fn create_pipeline(
-    device: &mut back::Device, extent: Extent2D,
+    device: &mut <I::Backend as Backend>::Device, extent: Extent2D,
     render_pass: &<I::Backend as Backend>::RenderPass,
   ) -> Result<
     (
