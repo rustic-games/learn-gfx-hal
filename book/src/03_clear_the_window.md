@@ -1052,7 +1052,7 @@ important data back up to the `new` method's primary scope. It's a Rust take on
 what you might call "[Style
 C](http://number-none.com/blow/blog/programming/2014/09/26/carmack-on-inlined-code.html)"
 coding. We're just going to let the method get super long, with every single
-step being as plan and obvious as possible, to see the full horror of what we're
+step being as plain and obvious as possible, to see the full horror of what we're
 doing.
 
 The actual process here is easy enough to understand.
