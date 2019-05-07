@@ -4,6 +4,22 @@
 
 [![gfx-hal:0.1](https://img.shields.io/badge/gfx--hal-0.1-blue.svg)](https://docs.rs/gfx-hal)
 
+# Project Status
+
+We're in long term maintenance mode!
+
+This teaches you how to use `gfx-hal-0.1.0`, but 99% of the world shouldn't be
+using `gfx-hal` directly in the first place. It's absolutely important to know
+what's going on, but then you should move to a higher level API. Which API?
+Well, right now [rendy](https://github.com/omni-viral/rendy) is your best bet.
+Is there a book you can read for that once you're done with this book? Thanks to
+`termhn`, [yes there is](https://github.com/termhn/learn-rendy).
+
+When `gfx-hal` puts out new releases the tutorials will be updated so that
+they always work with the latest release of `gfx-hal`, and I'll accept
+submissions if people want to add more examples and the lessons that go with
+them, but I don't plan on adding new lessons myself.
+
 # learn-gfx-hal
 
 Step by step tutorials for using the [gfx-hal](https://github.com/gfx-rs/gfx)

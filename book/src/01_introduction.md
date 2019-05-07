@@ -42,4 +42,9 @@ reviewing all that stuff together.
 
 The code all assumes that you're using **Rust 2018**.
 
-I set rustfmt to have 2 space indents and a line limit of 100.
+When first writing this document I was using my personal `rustfmt.toml` file,
+which mostly means 2 space tabs. When this book was transitioned to long term
+maintenance mode I was encouraged to change to 4 space tabs because this is more
+normal for the rust ecosystem. The actual source of the examples has been
+updated, but the example blocks in the markdown files were left as is. So
+there's a mild difference in the layout, but the code is the same.
