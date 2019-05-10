@@ -339,7 +339,7 @@ throwing macros at your problems! We'll get there eventually.
 I'm sorry ahead of time, but this process is a fiddly and long one compared to
 how easy that index buffer thing is.
 
-What we want is to take a collection of pixel data and get it form our CPU
+What we want is to take a collection of pixel data and get it from our CPU
 memory into GPU memory. However, as much as you might think, "oh that's super
 common, that's gotta be like 1 call right?" No, it's like 11 distinct steps,
 some of which are several calls.
