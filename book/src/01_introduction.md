@@ -48,3 +48,9 @@ maintenance mode I was encouraged to change to 4 space tabs because this is more
 normal for the rust ecosystem. The actual source of the examples has been
 updated, but the example blocks in the markdown files were left as is. So
 there's a mild difference in the layout, but the code is the same.
+
+**NOTE:** Recently grx-hal 0.2 came out, and at some point the book will get
+updates, but it's a lot of text to update carefully, so for now you'll have to
+transition from 0.1 to 0.2 yourself. The gfx-hal devs tell me that 0.2 is
+slightly breaking but not too breaking, and that it shouldn't be difficult for
+people to figure out. If you want the book fixed faster, PRs accepted!
