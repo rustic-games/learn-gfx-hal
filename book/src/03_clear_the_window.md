@@ -68,7 +68,7 @@ design. Let's keep it short:
   first.](https://caseymuratori.com/blog_0025)
 
 Even before we know _any details about how `gfx-hal` works_, we're going to just
-write out how we _think_ we should be able to use it. How we think it's be
+write out how we _think_ we should be able to use it. How we think it would be
 easiest to use. Once it's built we will be calling the methods a lot more than
 we'll be implementing the methods, so unless we end up with some sort of
 performance disaster or impossible requirement we'll keep the exterior simple
