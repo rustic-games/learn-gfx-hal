@@ -513,8 +513,8 @@ reads like a pile of space runes:
 
 ```rust
 pub unsafe fn submit<'a, T, Ic, S, Iw, Is>(
-    &mut self, 
-    submission: Submission<Ic, Iw, Is>, 
+    &mut self,
+    submission: Submission<Ic, Iw, Is>,
     fence: Option<&B::Fence>
 )
 where
@@ -553,23 +553,23 @@ The `present` method looks like this
 
 ```rust
 unsafe fn present<'a, C, S, Iw>(
-    &'a self, 
-    present_queue: &mut CommandQueue<B, C>, 
-    image_index: SwapImageIndex, 
+    &'a self,
+    present_queue: &mut CommandQueue<B, C>,
+    image_index: SwapImageIndex,
     wait_semaphores: Iw
 ) -> Result<(), ()>
 where
     Self: 'a + Sized + Borrow<B::Swapchain>,
     C: Capability,
     S: 'a + Borrow<B::Semaphore>,
-    Iw: IntoIterator<Item = &'a S>, 
+    Iw: IntoIterator<Item = &'a S>,
 ```
 
 And if we cut out the extra stuff:
 
 ```rust
 unsafe fn present(
-    &self, 
+    &self,
     present_queue: &mut CommandQueue<B, C>,
     image_index: SwapImageIndex,
     wait_semaphores: Iw) -> Result<(), ()>
@@ -743,15 +743,15 @@ To begin the buffer overall. Then we start a particular render pass with
 
 ```rust
 pub unsafe fn begin_render_pass_inline<T>(
-    &mut self, 
-    render_pass: &B::RenderPass, 
-    frame_buffer: &B::Framebuffer, 
-    render_area: Rect, 
+    &mut self,
+    render_pass: &B::RenderPass,
+    frame_buffer: &B::Framebuffer,
+    render_area: Rect,
     clear_values: T
 ) -> RenderPassInlineEncoder<B>
 where
     T: IntoIterator,
-    T::Item: Borrow<ClearValue>, 
+    T::Item: Borrow<ClearValue>,
 ```
 
 Which records a render pass with no secondary command buffers.
@@ -1262,9 +1262,9 @@ let (swapchain, extent, backbuffer, format, frames_in_flight) = {
   };
   let extent = caps.extents.end;
   let image_count = if present_mode == PresentMode::Mailbox {
-    (caps.image_count.end - 1).min(3)
+      (caps.image_count.end - 1).min(caps.image_count.start.max(3))
   } else {
-    (caps.image_count.end - 1).min(2)
+      (caps.image_count.end - 1).min(caps.image_count.start.max(2))
   };
   let image_layers = 1;
   let image_usage = if caps.usage.contains(Usage::COLOR_ATTACHMENT) {

@@ -497,9 +497,9 @@ impl HalState {
                 }
             };
             let image_count = if present_mode == PresentMode::Mailbox {
-                (caps.image_count.end - 1).min(3)
+                (caps.image_count.end - 1).min(caps.image_count.start.max(3))
             } else {
-                (caps.image_count.end - 1).min(2)
+                (caps.image_count.end - 1).min(caps.image_count.start.max(2))
             };
             let image_layers = 1;
             let image_usage = if caps.usage.contains(Usage::COLOR_ATTACHMENT) {
