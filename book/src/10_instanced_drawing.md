@@ -1,10 +1,6 @@
-# A new author!
-
-Introducing a new, star, guest author, @termhn! She's been
-helping our main man Lokathor with the previous lessons, but this
-time is hopping in to write the lesson for real. Woo!
-
 # Instanced Drawing
+
+* **Guest Author:** [termhn](https://github.com/termhn)
 
 So, now that we have a few cubes on the screen, what could be a more
 logical step than drawing **many, many more cubes on the screen**?!
