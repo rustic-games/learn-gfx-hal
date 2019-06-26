@@ -1,5 +1,7 @@
 # Generalizing HalState
 
+* **Guest Author:** [AlterionX](https://github.com/AlterionX)
+
 ## Initial Attempt
 
 So the first thing to do when generalizing code to multiple types is to identify
