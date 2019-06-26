@@ -226,7 +226,7 @@ fn main(){
   let hal_state = HalState::new(&winit_state.window);
   let mut local_state = LocalState::default();
   loop {
-    let inputs = UserInput::poll_events_loop(&mut winit_state.events_loop);
+    let inputs = UserInput::poll_events_loop(&mut winit_state.event_loop);
     if inputs.end_requested {
       break;
     }
