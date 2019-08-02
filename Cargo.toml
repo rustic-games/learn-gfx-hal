@@ -1,6 +1,6 @@
 [package]
 name = "learn-gfx-hal"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Lokathor <zefria@gmail.com>", "StarToaster"]
 repository = "https://github.com/rust-console/learn-gfx-hal"
 readme = "README.md"
@@ -16,10 +16,10 @@ dx12 = ["gfx-backend-dx12"]
 vulkan = ["gfx-backend-vulkan"]
 
 [dependencies]
-log = "0.4.0"
-simple_logger = "1.0"
-winit = "0.18"
-gfx-hal = "0.1"
+log = "0.4"
+simple_logger = "1"
+winit = "0.19"
+gfx-hal = "0.2"
 arrayvec = "0.4"
 shaderc = "0.3"
 image = "0.21"
@@ -27,13 +27,13 @@ nalgebra-glm = "0.2"
 rand = "0.6"
 
 [dependencies.gfx-backend-vulkan]
-version = "0.1"
+version = "0.2"
 optional = true
 
 [target.'cfg(target_os = "macos")'.dependencies.gfx-backend-metal]
-version = "0.1"
+version = "0.2"
 optional = true
 
 [target.'cfg(windows)'.dependencies.gfx-backend-dx12]
-version = "0.1"
+version = "0.2"
 optional = true
