@@ -31,10 +31,10 @@ Book](https://doc.rust-lang.org/book/) if you haven't ever done that.
 
 We will also be touching upon elements of `unsafe` Rust, and so you should also
 read [The Rustonomicon](https://doc.rust-lang.org/nomicon/) if you have not.
-Actually, that's a mild lie, most of `gfx-hal-0.1.0` doesn't define any of its
-safety limits anyway (not beyond "whatever Vulkan say is okay"), so it's all a
-shot in the dark no matter what you do. Even if you're using a backend that
-isn't Vulkan.
+Actually, that's a mild lie, most of `gfx-hal` doesn't define any of its safety
+limits anyway (not beyond "whatever Vulkan say is okay"), so it's all a shot in
+the dark no matter what you do. Even if you're using a backend that isn't
+Vulkan.
 
 I don't assume you have any prior graphics programming skills. I sure don't have
 much myself. I drew a quad once in OpenGL, but that's it. We'll be learning and
@@ -48,9 +48,3 @@ maintenance mode I was encouraged to change to 4 space tabs because this is more
 normal for the rust ecosystem. The actual source of the examples has been
 updated, but the example blocks in the markdown files were left as is. So
 there's a mild difference in the layout, but the code is the same.
-
-**NOTE:** Recently grx-hal 0.2 came out, and at some point the book will get
-updates, but it's a lot of text to update carefully, so for now you'll have to
-transition from 0.1 to 0.2 yourself. The gfx-hal devs tell me that 0.2 is
-slightly breaking but not too breaking, and that it shouldn't be difficult for
-people to figure out. If you want the book fixed faster, PRs accepted!
