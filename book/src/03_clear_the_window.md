@@ -17,7 +17,7 @@ which is like 97% "whatever Vulkan does", even if you're _not_ using the Vulkan
 backend, there's a great _many_ steps of setup involved between "a window that
 draws nothing" and "a window that draws one triangle".
 
-In fact the [official gfx-hal docs](https://docs.rs/gfx-hal/0.1.0/gfx_hal/)
+In fact the [official gfx-hal docs](https://docs.rs/gfx-hal/0.2/gfx_hal/)
 specifically give us a warning about this. The top level docs are so short I can
 include all three sentences right here for dramatic effect:
 
@@ -306,7 +306,7 @@ different.
 
 You use the [log](https://docs.rs/log) crate to write a logging message. You use
 [a logging implementation of
-choice](https://docs.rs/log/0.4.6/log/#available-logging-implementations) to
+choice](https://docs.rs/log/0.4/log/#available-logging-implementations) to
 actually process those logging messages. The actual macros for logging are just
 like how `println!` works, but instead of being called `println!` there's one
 macro for each "level" of logging. From most important to least important it
@@ -325,9 +325,9 @@ First we add things to our `Cargo.toml` file.
 
 ```toml
 [dependencies]
-log = "0.4.0"
-simple_logger = "1.0"
-winit = "0.18"
+log = "0.4"
+simple_logger = "1"
+winit = "0.19"
 ```
 
 And then we turn on the `simple_logger` in main before we do anything else:
@@ -383,22 +383,22 @@ dx12 = ["gfx-backend-dx12"]
 vulkan = ["gfx-backend-vulkan"]
 
 [dependencies]
-log = "0.4.0"
-simple_logger = "1.0"
-winit = "0.18"
-gfx-hal = "0.1"
+log = "0.4"
+simple_logger = "1"
+winit = "0.19"
+gfx-hal = "0.2"
 arrayvec = "0.4"
 
 [dependencies.gfx-backend-vulkan]
-version = "0.1"
+version = "0.2"
 optional = true
 
 [target.'cfg(target_os = "macos")'.dependencies.gfx-backend-metal]
-version = "0.1"
+version = "0.2"
 optional = true
 
 [target.'cfg(windows)'.dependencies.gfx-backend-dx12]
-version = "0.1"
+version = "0.2"
 optional = true
 ```
 
@@ -491,10 +491,10 @@ impl HalState {
 ## CommandQueue
 
 The heart of it all is that we want to be able to safely call
-[CommandQueue::submit](https://docs.rs/gfx-hal/0.1.0/gfx_hal/queue/struct.CommandQueue.html#method.submit),
+[CommandQueue::submit](https://docs.rs/gfx-hal/0.2/gfx_hal/queue/struct.CommandQueue.html#method.submit),
 which submits a list of work which we define in a `CommandBuffer` to the GPU (in
 this case just clearing the image), and then we call
-[Swapchain::present](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/trait.Swapchain.html#method.present),
+[Swapchain::present](https://docs.rs/gfx-hal/0.2/gfx_hal/window/trait.Swapchain.html#method.present),
 which instructs the GPU to wait until the CommandQueue work is done and
 "present" the completed image into the Swapchain.
 
@@ -557,7 +557,7 @@ unsafe fn present<'a, C, S, Iw>(
     present_queue: &mut CommandQueue<B, C>,
     image_index: SwapImageIndex,
     wait_semaphores: Iw
-) -> Result<(), ()>
+) -> Result<Option<Suboptimal>, PresentError>
 where
     Self: 'a + Sized + Borrow<B::Swapchain>,
     C: Capability,
@@ -572,7 +572,7 @@ unsafe fn present(
     &self,
     present_queue: &mut CommandQueue<B, C>,
     image_index: SwapImageIndex,
-    wait_semaphores: Iw) -> Result<(), ()>
+    wait_semaphores: Iw) -> Result<Option<Suboptimal>, PresentError>
 ```
 
 So `present` takes a `&mut` to our `CommandQueue`, a target index within the
@@ -646,12 +646,12 @@ pub struct Submission {
 ```
 
 * `command_buffers` is our
-  [Submittable](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/trait.Submittable.html)
+  [Submittable](https://docs.rs/gfx-hal/0.2/gfx_hal/command/trait.Submittable.html)
   things, which are `Borrow<B::CommandBuffer>`, so we can think of that as being
   _sorta_ like `&[CommandBuffer]`.
 * `wait_semaphores` gives the semaphores that this submission has to _wait on
   before it starts_. Each semaphore is paired with a
-  [PipelineStage](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.PipelineStage.html),
+  [PipelineStage](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.PipelineStage.html),
   allowing your submission to wait for a stage, do some work at that stage, wait
   for another stage, do some more work at the new stage, and so on.
 * `signal_semaphores` gives a list of semaphores that this submission _will
@@ -702,6 +702,7 @@ So far it sounds like we want something like this
     unsafe {
       the_command_queue.submit(submission, Some(flight_fence));
       the_swapchain.present(&mut the_command_queue, i_u32, present_wait_semaphores)
+        .map(|_| ())
         .map_err(|_|"Failed to present into the swapchain!")
     }
   }
@@ -713,7 +714,7 @@ fairly reasonable so far.
 ## Recording Commands
 
 So we need to fill up a
-[CommandBuffer](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/struct.CommandBuffer.html)
+[CommandBuffer](https://docs.rs/gfx-hal/0.2/gfx_hal/command/struct.CommandBuffer.html)
 with the operations that we want to have happen during the draw process.
 
 All we want to do is clear the screen, that's got to be easy enough.
@@ -728,10 +729,9 @@ instead. Thankfully (I guess), recording to a CommandBuffer is all unsafe, so
 we can kill two birds with one stone.
 
 A CommandBuffer is actually wrapping around a
-[RawCommandBuffer](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/trait.RawCommandBuffer.html)
+[RawCommandBuffer](https://docs.rs/gfx-hal/0.2/gfx_hal/command/trait.RawCommandBuffer.html)
 with some metadata for bonus type safety. All the real documentation is given on
-the RawCommandBuffer type. Unfortunately, the methods aren't _exactly_ the same
-name. Hopefully that's fixed in 0.2.
+the RawCommandBuffer type.
 
 We start by calling `begin`
 
@@ -763,7 +763,7 @@ ClearValue just picks what color to clear to.
 Note: images can have more than just color data, so we have to put the "clear to
 this color" part into an iterator. In more advanced code you'd specify the clear
 color and also the clear depth value (they're both part of the
-[ClearValue](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/enum.ClearValue.html)
+[ClearValue](https://docs.rs/gfx-hal/0.2/gfx_hal/command/enum.ClearValue.html)
 enum). We're not using the depth buffer at the moment, so it's just a 1 element
 array.
 
@@ -834,9 +834,9 @@ clear.
     self.current_frame = (self.current_frame + 1) % self.frames_in_flight;
 
     let (i_u32, i_usize) = unsafe {
-      let image_index = self
+      let (image_index, _) = self
         .swapchain
-        .acquire_image(core::u64::MAX, FrameSync::Semaphore(image_available))
+        .acquire_image(core::u64::MAX, Some(image_available), None)
         .map_err(|_| "Couldn't acquire an image from the swapchain!")?;
       (image_index, image_index as usize)
     };
@@ -884,6 +884,7 @@ clear.
       self
         .swapchain
         .present(the_command_queue, i_u32, present_wait_semaphores)
+        .map(|_| ())
         .map_err(|_| "Failed to present into the swapchain!")
     }
   }
@@ -910,8 +911,7 @@ But, as you can probably guess, that's _not_ the order that they're initialized.
 You should have noticed that there's some things on there we haven't even
 discussed yet, which also have their requirements. In no particular order:
 
-* image_views (requires a Device+Backbuffer)
-* backbuffer (requires Surface+Adapter)
+* image_views (requires Device)
 * Command Pool (requires Device)
 * Surface (requires an Instance+Window)
 * Adapter (requires an Instance)
@@ -928,7 +928,6 @@ on. We'll even add some names to the build phases to help group it mentally:
   * device (requires an Adapter)
 * The GPU Swapchain
   * swapchain (requires a Surface+Adapter+Device)
-  * backbuffer (requires Surface+Adapter)
   * render_area (comes from the Swapchain)
   * frames_in_flight (comes from the Swapchain)
   * fences (requires a Device + frames_in_flight)
@@ -936,7 +935,7 @@ on. We'll even add some names to the build phases to help group it mentally:
 * RenderPass
   * render_pass (requires a Device + Swapchain format)
 * Targets For Rendering
-  * image_views (requires a Device+Backbuffer)
+  * image_views (requires a Device)
   * framebuffers (requires ImageView values)
 * Command Issuing
   * Command Pool (requires Device)
@@ -980,7 +979,7 @@ to close down, so you have to hold on to it at the very end and let it go last.
 
 For something so important, you'd imagine that there's a dedicated trait for
 them, and [you'd be
-right](https://docs.rs/gfx-hal/0.1.0/gfx_hal/trait.Instance.html). You'd also
+right](https://docs.rs/gfx-hal/0.2/gfx_hal/trait.Instance.html). You'd also
 expect that the trait includes a way to create them instead of leaving it up to
 convention, and you'd be wrong.
 
@@ -993,7 +992,7 @@ let instance = back::Instance::create(WINDOW_NAME, 1);
 
 ### Surface
 
-The [Surface](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/trait.Surface.html)
+The [Surface](https://docs.rs/gfx-hal/0.2/gfx_hal/window/trait.Surface.html)
 is an abstraction of how the `Window` (from `winit`) and your `Instance` (from
 your `gfx-backend-whatever`) will actually be able to interact and show
 something on the screen.
@@ -1009,7 +1008,7 @@ outlive the Instance or the Window, but that's just a best guess.
 
 ### Adapter
 
-The [Adapter](https://docs.rs/gfx-hal/0.1.0/gfx_hal/adapter/struct.Adapter.html)
+The [Adapter](https://docs.rs/gfx-hal/0.2/gfx_hal/adapter/struct.Adapter.html)
 is... _something_ that supports the usage of the API you've got an Instance for.
 It's _probably_ a hardware GPU, but it could technically be a purely software
 implementation.
@@ -1021,7 +1020,7 @@ address you want, and then another step to actually open a connection to that IP
 address (which we'll do in a moment).
 
 We have to call
-[Instance::enumerate_adapters](https://docs.rs/gfx-hal/0.1.0/gfx_hal/trait.Instance.html#tymethod.enumerate_adapters),
+[Instance::enumerate_adapters](https://docs.rs/gfx-hal/0.2/gfx_hal/trait.Instance.html#tymethod.enumerate_adapters),
 which gives a vector of things to pick from. Our criteria here is based on the `queue_families: Vec<B::QueueFamily>` that each Adapter has. We want a QueueFamily
 
 1) That supports Graphics
@@ -1058,18 +1057,18 @@ doing.
 The actual process here is easy enough to understand.
 
 * Every Adapter has a
-  [PhysicalDevice](https://docs.rs/gfx-hal/0.1.0/gfx_hal/adapter/trait.PhysicalDevice.html),
+  [PhysicalDevice](https://docs.rs/gfx-hal/0.2/gfx_hal/adapter/trait.PhysicalDevice.html),
   and you call `open` to actually "connect" your program to that PhysicalDevice.
   This (hopefully) gives a Gpu. You have to pass in a list of QueueFamily values
   with a priority for each one.
-* A [Gpu](https://docs.rs/gfx-hal/0.1.0/gfx_hal/struct.Gpu.html) is a pairing of
-  a [Device](https://docs.rs/gfx-hal/0.1.0/gfx_hal/device/trait.Device.html)
+* A [Gpu](https://docs.rs/gfx-hal/0.2/gfx_hal/struct.Gpu.html) is a pairing of
+  a [Device](https://docs.rs/gfx-hal/0.2/gfx_hal/device/trait.Device.html)
   (which is a logical device, but you use it so often they wanted to make the
   name shorter) and a
-  [Queues](https://docs.rs/gfx-hal/0.1.0/gfx_hal/queue/family/struct.Queues.html)
+  [Queues](https://docs.rs/gfx-hal/0.2/gfx_hal/queue/family/struct.Queues.html)
   value, which is a container for the different queues that we can now use.
 * Once we've got the Queues, we pull out a particular
-  [QueueGroup](https://docs.rs/gfx-hal/0.1.0/gfx_hal/queue/family/struct.QueueGroup.html)
+  [QueueGroup](https://docs.rs/gfx-hal/0.2/gfx_hal/queue/family/struct.QueueGroup.html)
   as well, which we use much later to build the CommandPool, and also it's how
   we `submit` our written CommandBuffer values of course.
 
@@ -1083,7 +1082,7 @@ let (device, queue_group) = {
   let Gpu { device, mut queues } = unsafe {
     adapter
       .physical_device
-      .open(&[(&queue_family, &[1.0; 1])])
+      .open(&[(&queue_family, &[1.0; 1])], Features::empty())
       .map_err(|_| "Couldn't open the PhysicalDevice!")?
   };
   let queue_group = queues
@@ -1111,7 +1110,7 @@ It's fine to just do it twice, don't worry too much about it, really.
 ## The GPU Swapchain
 
 The
-[Swapchain](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/trait.Swapchain.html)
+[Swapchain](https://docs.rs/gfx-hal/0.2/gfx_hal/window/trait.Swapchain.html)
 is like a collection of images on the GPU. They've got a linear index, like an
 array or vector, and the GPU jumps around the Swapchain showing one image at any
 given moment. This is where things start to get more configurable.
@@ -1119,15 +1118,14 @@ given moment. This is where things start to get more configurable.
 ### Swapchain and friends
 
 The basic idea is that you call
-[Surface::compatibility](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/trait.Surface.html#tymethod.compatibility)
+[Surface::compatibility](https://docs.rs/gfx-hal/0.2/gfx_hal/window/trait.Surface.html#tymethod.compatibility)
 to get information about what sort of
-[SwapchainConfig](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/struct.SwapchainConfig.html)
+[SwapchainConfig](https://docs.rs/gfx-hal/0.2/gfx_hal/window/struct.SwapchainConfig.html)
 you're allowed to build, and then you call
-[Device::create_swapchain](https://docs.rs/gfx-hal/0.1.0/gfx_hal/device/trait.Device.html#tymethod.create_swapchain)
+[Device::create_swapchain](https://docs.rs/gfx-hal/0.2/gfx_hal/device/trait.Device.html#tymethod.create_swapchain)
 with your Surface and the config you want. This gives you a Swapchain, which has
-methods for controlling the GPU's swapchain, as well as a
-[Backbuffer](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/enum.Backbuffer.html),
-which holds the handles to particular Image data. We use an Image to make an
+methods for controlling the GPU's swapchain, as well as a vector of images which
+hold the handles to the particular Image data. We use an Image to make an
 ImageView, and we use that to make a Framebuffer, and _that's_ what we're
 manipulating with the CommandBuffer.
 
@@ -1137,12 +1135,10 @@ backend to the DX12 backend on a single machine the system ends up giving me
 different compatibility results.
 
 The SwapchainConfig type does have a `from_caps` method to try and help you
-build a value, but it's shockingly error prone, because not all of the
-capabilities of your Surface are actually contained in the SurfaceCapabilities
-struct! The `Surface::compatibility` also gives you Format, PresentMode, and
-CompositeAlpha that you have to pay attention to, which `from_caps` totally
-ignores. We're not going to use that, we'll just write out a struct literal
-ourselves. SwapchainConfig looks like this:
+build a value, but it's error prone, because it does not take into account the
+`PresentMode` capability that you have to pay attention to. We're not going to
+use that, we'll just write out a struct literal ourselves. SwapchainConfig looks
+like this:
 
 ```rust
 pub struct SwapchainConfig {
@@ -1157,7 +1153,7 @@ pub struct SwapchainConfig {
 ```
 
 * `present_mode`:
-  [PresentMode](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/enum.PresentMode.html)
+  [PresentMode](https://docs.rs/gfx-hal/0.2/gfx_hal/window/enum.PresentMode.html)
   gives us access to that sweet, sweet Vsync. Well, if it's available.
   * We would most like to have `Mailbox`, which lets us do "triple buffering".
     That's where you have at least 3 images, and one is "being shown" and then
@@ -1176,17 +1172,17 @@ pub struct SwapchainConfig {
     because we'd have to sync the program ourselves to avoid eating up 100% of
     the core (and all of the user's battery, if they're on a mobile device).
 * `composite_alpha`:
-  [CompositeAlpha](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/enum.CompositeAlpha.html)
+  [CompositeAlpha](https://docs.rs/gfx-hal/0.2/gfx_hal/window/struct.CompositeAlpha.html)
   controls how your window interacts with other windows within the user's UI.
-  * For now we'd prefer `Opaque`, so that we just show our window "normally".
-  * We'd also accept `Native`, because we trust the user to have set things up
+  * For now we'd prefer `OPAQUE`, so that we just show our window "normally".
+  * We'd also accept `NATIVE`, because we trust the user to have set things up
     how they want.
-  * `PreMultiplied` or `PostMultiplied` will almost certainly give "wrong"
+  * `PREMULTIPLIED` or `POSTMULTIPLIED` will almost certainly give "wrong"
     results because our graphics aren't smart enough to compensate for being
     forced into such a mode. Well, they'd be wrong if our graphics were anything
     more than a single clear color, but you know what I mean.
 * `format`: The
-  [Format](https://docs.rs/gfx-hal/0.1.0/gfx_hal/format/enum.Format.html) of the
+  [Format](https://docs.rs/gfx-hal/0.2/gfx_hal/format/enum.Format.html) of the
   swapchain is how the data for each pixel is expected to exist in memory.
   _Normally_ we'd be a lot more interested, but since we're just clearing the
   screen it doesn't super matter. Still, we'll try to pick an sRGB format (which
@@ -1194,7 +1190,7 @@ pub struct SwapchainConfig {
   in basically all the future lessons. Here we've got an `Option<Vec<_>>`, which
   means that the selection block will be silly and fiddly.
 * `extent`: The
-  [Extent2D](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/struct.Extent2D.html)
+  [Extent2D](https://docs.rs/gfx-hal/0.2/gfx_hal/window/struct.Extent2D.html)
   describes a full sized rectangle (not a sub-rectangle), and selects a size for
   our images. Here's where we start using the SurfaceCapabilities that we got
   earlier. The SwapchainConfig `extent` that we use must be within the range
@@ -1207,31 +1203,31 @@ pub struct SwapchainConfig {
     can. The Surface should should end up being the size of our Window, so our
     images are just "normal" size and it all works out.
 * `image_count`: The
-  [SwapImageIndex](https://docs.rs/gfx-hal/0.1.0/gfx_hal/window/type.SwapImageIndex.html)
+  [SwapImageIndex](https://docs.rs/gfx-hal/0.2/gfx_hal/window/type.SwapImageIndex.html)
   is just a `u32` for how many images we want in our Swapchain. Like I said, if
   we're going to be using `Mailbox` then we want 3, otherwise we'll go with 2.
   Note that we have to respect the `image_count: Range<SwapImageIndex>` field of
   the SurfaceCapabilities, which is _another_ field that is a Range but should
   actually be a RangeInclusive.
 * `image_layers`: The
-  [Layer](https://docs.rs/gfx-hal/0.1.0/gfx_hal/image/type.Layer.html) is just a
+  [Layer](https://docs.rs/gfx-hal/0.2/gfx_hal/image/type.Layer.html) is just a
   `u16` for how many layers we want in our image. 1 is fine.
 * `image_usage`: The
-  [Usage](https://docs.rs/gfx-hal/0.1.0/gfx_hal/image/struct.Usage.html) defines
+  [Usage](https://docs.rs/gfx-hal/0.2/gfx_hal/image/struct.Usage.html) defines
   how we'll be using the images in the swap chain in terms of the render pass
   stuff. We'll be using just color for now, so we check for that.
 
 With that all done, we make the SwapchainConfig and then we use the Device to
-build a Swapchain and Backbuffer pair. This is a very vertical portion of code,
-but not too much is actually happening.
+build a Swapchain and images vector pair. This is a very vertical portion of
+code, but not too much is actually happening.
 
 ```rust
-let (swapchain, extent, backbuffer, format, frames_in_flight) = {
-  let (caps, preferred_formats, present_modes, composite_alphas) = surface.compatibility(&adapter.physical_device);
+let (swapchain, extent, images, format, frames_in_flight) = {
+  let (caps, preferred_formats, present_modes) = surface.compatibility(&adapter.physical_device);
   info!("{:?}", caps);
   info!("Preferred Formats: {:?}", preferred_formats);
   info!("Present Modes: {:?}", present_modes);
-  info!("Composite Alphas: {:?}", composite_alphas);
+  info!("Composite Alphas: {:?}", caps.composite_alpha);
   //
   let present_mode = {
     use gfx_hal::window::PresentMode::*;
@@ -1242,12 +1238,17 @@ let (swapchain, extent, backbuffer, format, frames_in_flight) = {
       .ok_or("No PresentMode values specified!")?
   };
   let composite_alpha = {
-    use gfx_hal::window::CompositeAlpha::*;
-    [Opaque, Inherit, PreMultiplied, PostMultiplied]
-      .iter()
-      .cloned()
-      .find(|ca| composite_alphas.contains(ca))
-      .ok_or("No CompositeAlpha values specified!")?
+    use gfx_hal::window::CompositeAlpha;
+    [
+        CompositeAlpha::OPAQUE,
+        CompositeAlpha::INHERIT,
+        CompositeAlpha::PREMULTIPLIED,
+        CompositeAlpha::POSTMULTIPLIED,
+    ]
+    .iter()
+    .cloned()
+    .find(|ca| caps.composite_alpha.contains(*ca))
+    .ok_or("No CompositeAlpha values specified!")?
   };
   let format = match preferred_formats {
     None => Format::Rgba8Srgb,
@@ -1283,18 +1284,18 @@ let (swapchain, extent, backbuffer, format, frames_in_flight) = {
   };
   info!("{:?}", swapchain_config);
   //
-  let (swapchain, backbuffer) = unsafe {
+  let (swapchain, images) = unsafe {
     device
       .create_swapchain(&mut surface, swapchain_config, None)
       .map_err(|_| "Failed to create the swapchain!")?
   };
-  (swapchain, extent, backbuffer, format, image_count as usize)
+  (swapchain, extent, images, format, image_count as usize)
 };
 ```
 
 #### render_area
 
-This is a [Rect](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.Rect.html)
+This is a [Rect](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.Rect.html)
 version of our Extent2D. While an Extent2D is semantically the full area of an
 image or texture (storing only width:`u32` and height:`u32`), a Rect is some
 sub-portion of such an area (storing x,y,w,h, all `i16`). Note that your
@@ -1339,15 +1340,15 @@ lets you be very precise about what happens when.
 The RenderPass type has a backend specific definition so there's no general
 struct here, not even a trait for them, unfortunately. Instead, you make one
 with
-[Device::create_render_pass](https://docs.rs/gfx-hal/0.1.0/gfx_hal/device/trait.Device.html#tymethod.create_render_pass).
+[Device::create_render_pass](https://docs.rs/gfx-hal/0.2/gfx_hal/device/trait.Device.html#tymethod.create_render_pass).
 This works a lot like that Submission stuff we had to deal with before, where
 we'll have lists of stuff that all kinda get piled together. We need one
-[Attachment](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pass/struct.Attachment.html)
+[Attachment](https://docs.rs/gfx-hal/0.2/gfx_hal/pass/struct.Attachment.html)
 value (for the color), one
-[SubpassDesc](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pass/struct.SubpassDesc.html)
+[SubpassDesc](https://docs.rs/gfx-hal/0.2/gfx_hal/pass/struct.SubpassDesc.html)
 value (remember how we did a single "inline" render pass?), and then naturally
 we have no
-[SubpassDependency](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pass/struct.SubpassDependency.html)
+[SubpassDependency](https://docs.rs/gfx-hal/0.2/gfx_hal/pass/struct.SubpassDependency.html)
 values since we only have a single subpass.
 
 * Our Attachment needs
@@ -1372,7 +1373,7 @@ values since we only have a single subpass.
 * Our SubpassDesc needs the color attachment, and no others. This is where you
   _can_ get really fancy with "post-processing effects" type of stuff. We just
   need one
-  [AttachmentRef](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pass/type.AttachmentRef.html)
+  [AttachmentRef](https://docs.rs/gfx-hal/0.2/gfx_hal/pass/type.AttachmentRef.html)
   for our colors. An ID value (0 is fine) and a layout. _During_ this pass we'll
   be affecting the color, so we'll pick `ColorAttachmentOptimal`. Well, we don't
   affect the colors after the clear during this tutorial, but once we start
@@ -1413,34 +1414,30 @@ out as possible.
 
 ### ImageView
 
-First we have to take the Images (in the Backbuffer) and then make one ImageView
-each. This adds the metadata to each image on how we're using it.
+First we have to take the Images and then make one ImageView each. This adds the
+metadata to each image on how we're using it.
 
-There's not too much to say about the process here. The Backbuffer technically
-can hold two possible setups, one of which is for OpenGL and the other of which
-is for everything else. It throws a bit of a wrench into our plans to support
-the OpenGL setup so... well we just won't do it for now. After that's settled
-it's just a simple map operation where we call
-[Device::create_image_view](https://docs.rs/gfx-hal/0.1.0/gfx_hal/device/trait.Device.html#tymethod.create_image_view)
+There's not too much to say about the process here. It's just a simple map
+operation where we call
+[Device::create_image_view](https://docs.rs/gfx-hal/0.2/gfx_hal/device/trait.Device.html#tymethod.create_image_view)
 a bunch and collect it all up.
 
 We've seen some of this before.
 
-* [ViewKind](https://docs.rs/gfx-hal/0.1.0/gfx_hal/image/enum.ViewKind.html)
+* [ViewKind](https://docs.rs/gfx-hal/0.2/gfx_hal/image/enum.ViewKind.html)
   lets us pick that we want this ImageView to be a 2D image, which is already
   enough of a heads up to know that an "Image" can get pretty weird the farther
   we go into this and the more types of ViewKind we eventually use.
-* [Swizzle](https://docs.rs/gfx-hal/0.1.0/gfx_hal/format/struct.Swizzle.html)
+* [Swizzle](https://docs.rs/gfx-hal/0.2/gfx_hal/format/struct.Swizzle.html)
   gives you the ability to transition between two different color channel
   orderings, but we have no need for that now so we can use the `NO` constant.
-* [SubresourceRange](https://docs.rs/gfx-hal/0.1.0/gfx_hal/image/struct.SubresourceRange.html)
+* [SubresourceRange](https://docs.rs/gfx-hal/0.2/gfx_hal/image/struct.SubresourceRange.html)
   lets us pick what sub-resources (eg: Color / Depth / Stencil) are used at what
   mipmap levels (think "zoom levels"), and in what parts of the array (if our
   image is an array, which it's not).
 
 ```rust
-let image_views: Vec<_> = match backbuffer {
-  Backbuffer::Images(images) => images
+let image_views: Vec<_> = images
     .into_iter()
     .map(|image| unsafe {
       device
@@ -1457,16 +1454,14 @@ let image_views: Vec<_> = match backbuffer {
         )
         .map_err(|_| "Couldn't create the image_view for the image!")
     })
-    .collect::<Result<Vec<_>, &str>>()?,
-  Backbuffer::Framebuffer(_) => unimplemented!("Can't handle framebuffer backbuffer!"),
-};
+    .collect::<Result<Vec<_>, &str>>()?;
 ```
 
 ### Framebuffer
 
 Once we've got our ImageView values set, we can get one Framebuffer for each
 with
-[Device::create_framebuffer](https://docs.rs/gfx-hal/0.1.0/gfx_hal/device/trait.Device.html#tymethod.create_framebuffer).
+[Device::create_framebuffer](https://docs.rs/gfx-hal/0.2/gfx_hal/device/trait.Device.html#tymethod.create_framebuffer).
 This is what we actually target with our CommandBuffer recordings. It's another
 quick map operation, even less to say than with the ImageViews.
 
@@ -1577,7 +1572,7 @@ to read it, but these are just the troubles with FFI.
 The first thing we do in the drop method is wait for the device to go idle. It's
 not legal to destroy resources that are in use, so we just give it a moment to
 cool down by calling
-[Device::wait_idle](https://docs.rs/gfx-hal/0.1.0/gfx_hal/device/trait.Device.html#tymethod.wait_idle).
+[Device::wait_idle](https://docs.rs/gfx-hal/0.2/gfx_hal/device/trait.Device.html#tymethod.wait_idle).
 This could technically error, but at this point we're tearing it all down so we
 don't care about the error. The device had its chance and now we're in charge.
 
