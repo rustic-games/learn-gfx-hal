@@ -37,7 +37,7 @@ points an identical `z` coordinate for now.
 
 To have some sort of confirmation of input and output like before we'll have one
 of the triangle points follow the user's mouse movements. Nothing fancy, just a
-way to see that we're continually  drawing a new thing each time. Actually
+way to see that we're continually drawing a new thing each time. Actually
 passing in the triangle to draw is basically identical to the clear color
 function:
 
@@ -183,7 +183,7 @@ grows.
 
 # Drawing A Triangle
 
-To draw a triangle, we will use the same sort of setup before, with the frame
+To draw a triangle, we will use the same sort of setup as before, with the frame
 based drawing and the "ring buffer" vectors of all our tools. Literally just
 copy and paste all of `draw_clear_frame` to a new spot and name it
 `draw_triangle_frame`, the bulk of it is that similar. The argument is a single
@@ -273,26 +273,26 @@ This time out the mouse will control one of the triangle points instead of the
 color, so we'll pick a fixed color for the clear color. Once we start the
 "render pass inline" we're actually going to bind what we get back from that.
 It's a
-[RenderPassInlineEncoder](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/struct.RenderPassInlineEncoder.html),
+[RenderPassInlineEncoder](https://docs.rs/gfx-hal/0.2/gfx_hal/command/struct.RenderPassInlineEncoder.html),
 which is also
-Deref<Target=[RenderSubpassCommon](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/struct.RenderSubpassCommon.html)>,
+`Deref<Target=[RenderSubpassCommon](https://docs.rs/gfx-hal/0.2/gfx_hal/command/struct.RenderSubpassCommon.html)>`,
 and it gives us access to the operations of a particular render pass.
 
-* [RenderSubpassCommon::bind_graphics_pipeline](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/struct.RenderSubpassCommon.html#method.bind_graphics_pipeline)
+* [RenderSubpassCommon::bind_graphics_pipeline](https://docs.rs/gfx-hal/0.2/gfx_hal/command/struct.RenderSubpassCommon.html#method.bind_graphics_pipeline)
   picks a particular graphics pipeline for the rendering of this subpass. You
   _can_ have more than one graphics pipeline, each with its own settings, if you
   want, though while we're starting out we only need one per program.
-* [RenderSubpassCommon::bind_vertex_buffers](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/struct.RenderSubpassCommon.html#method.bind_vertex_buffers)
+* [RenderSubpassCommon::bind_vertex_buffers](https://docs.rs/gfx-hal/0.2/gfx_hal/command/struct.RenderSubpassCommon.html#method.bind_vertex_buffers)
   picks the vertex buffers to use for this subpass. The magical looking `0` here
   has to match up with the
-  [VertexBufferDesc](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.VertexBufferDesc.html)
+  [VertexBufferDesc](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.VertexBufferDesc.html)
   that's specified as part of the graphics pipeline that you're using. We'll
   talk about the full graphics pipeline definition in a moment, but the thing to
   pay attention to right now is that you can have many buffers and you don't
   need to specify them all in a single bind call. You could give 3 starting at
   0, give 3 more starting at 3, etc. We only have one buffer, so we just need
   one bind call and we place it at the 0th index.
-* [RenderSubpassCommon::draw](https://docs.rs/gfx-hal/0.1.0/gfx_hal/command/struct.RenderSubpassCommon.html#method.draw)
+* [RenderSubpassCommon::draw](https://docs.rs/gfx-hal/0.2/gfx_hal/command/struct.RenderSubpassCommon.html#method.draw)
   uses Range properly, so those really are exclusive endings. This uses our
   three vertices (indexed 0, 1, 2) and a single instance (indexed 0). The
   instance thing has to do with a more advanced technique called "instanced
@@ -355,7 +355,7 @@ take it on faith that they do something important, without yet knowing what they
 do precisely.
 
 If we review the
-[Device](https://docs.rs/gfx-hal/0.1.0/gfx_hal/device/trait.Device.html) trait
+[Device](https://docs.rs/gfx-hal/0.2/gfx_hal/device/trait.Device.html) trait
 we'll see that each of these things comes from a `create_foo` method on the
 Device, so we'll need to add them to the Drop code for `HalState`. I'll assume
 that you can do that yourself by now, you just do the same thing as before. 1)
@@ -368,7 +368,7 @@ The sub-passes of the pipeline we make will need to be able to reference back to
 it during the setup.
 
 So we want to make a
-[GraphicsPipelineDesc](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.GraphicsPipelineDesc.html),
+[GraphicsPipelineDesc](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.GraphicsPipelineDesc.html),
 but as you can see there's 13 fields there, so we'll have to handle a few at a
 time until everything is ready.
 
@@ -396,7 +396,7 @@ tools that are easiest for us to use right now do GLSL -> SPIRV.
 
 A **Shader Module** is a handle that you get when you upload some shader code to
 the GPU. We take a few shader modules and put them together into a
-[GraphicsShaderSet](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.GraphicsShaderSet.html).
+[GraphicsShaderSet](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.GraphicsShaderSet.html).
 
 ```rust
     let mut compiler = shaderc::Compiler::new().ok_or("shaderc not found!")?;
@@ -459,29 +459,23 @@ separating off all the stuff that happens while we've got those shader modules
 created.
 
 To make a GraphicsShaderSet we need an
-[EntryPoint](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.EntryPoint.html)
+[EntryPoint](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.EntryPoint.html)
 for each shader. It needs the `entry` (which matches the entry defined in the
 compiled SPIRV code), the shader module, and a
-[Specialization](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.Specialization.html),
-which we won't use right now (we'll just give empty slices).
+[Specialization](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.Specialization.html),
+which we won't use right now.
 
 ```rust
       let (vs_entry, fs_entry) = (
         EntryPoint {
           entry: "main",
           module: &vertex_shader_module,
-          specialization: Specialization {
-            constants: &[],
-            data: &[],
-          },
+          specialization: Specialization::EMPTY,
         },
         EntryPoint {
           entry: "main",
           module: &fragment_shader_module,
-          specialization: Specialization {
-            constants: &[],
-            data: &[],
-          },
+          specialization: Specialization::EMPTY,
         },
       );
       let shaders = GraphicsShaderSet {
@@ -497,9 +491,9 @@ which we won't use right now (we'll just give empty slices).
 
 Once we've got all of our shader stuff arranged, we need to define all the other
 parts. The first thing up (going in order of the pipeline diagram) is the
-[InputAssemblerDesc](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.InputAssemblerDesc.html),
+[InputAssemblerDesc](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.InputAssemblerDesc.html),
 where we pick a
-[Primitive](https://docs.rs/gfx-hal/0.1.0/gfx_hal/enum.Primitive.html) for how
+[Primitive](https://docs.rs/gfx-hal/0.2/gfx_hal/enum.Primitive.html) for how
 our vertices will be treated. The vertices are really just a huge list of values
 (usually `f32`, but even then not always), and you have to tell the system how
 it's supposed to turn those values into geometry. You should check the [vulkan
@@ -532,20 +526,20 @@ doing a single monochrome triangle, so we'll just have each vertex specify an
       let vertex_buffers: Vec<VertexBufferDesc> = vec![VertexBufferDesc {
         binding: 0,
         stride: (size_of::<f32>() * 2) as u32,
-        rate: 0,
+        rate: VertexInputRate::Vertex,
       }];
       let attributes: Vec<AttributeDesc> = vec![AttributeDesc {
         location: 0,
         binding: 0,
         element: Element {
-          format: Format::Rg32Float,
+          format: Format::Rg32Sfloat,
           offset: 0,
         },
       }];
 ```
 
 For the
-[VertexBufferDesc](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.VertexBufferDesc.html)
+[VertexBufferDesc](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.VertexBufferDesc.html)
 we give:
 * A `binding` index: remember that "magical 0" I mentioned we used when we wrote
   the CommandBuffer? That's this thing.
@@ -556,7 +550,7 @@ we give:
 We need one of these descriptions _per vertex buffer_.
 
 For the
-[AttributeDesc](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.AttributeDesc.html)
+[AttributeDesc](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.AttributeDesc.html)
 we give
 * A `location`: which will match up with locations specified for inputs in our
   shader code. They're counted up from 0, like array indexes.
@@ -564,13 +558,13 @@ we give
   AttributeDesc is for. Each VertexBufferDesc can have its own attribute
   arrangement if you like, it can get quite intricate.
 * An `element`: This is an
-  [Element](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.Element.html)
+  [Element](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.Element.html)
   entry, which gives the
-  [Format](https://docs.rs/gfx-hal/0.1.0/gfx_hal/format/enum.Format.html) of the
+  [Format](https://docs.rs/gfx-hal/0.2/gfx_hal/format/enum.Format.html) of the
   particular attribute, as well as the byte offset for how far into the vertex
   entry this particular attribute starts. The formats are mostly all specified
   in terms of what sort of color data format they'd give, so "two f32 values" is
-  `Rg32Float`, even though we won't be using them as red and green channel data.
+  `Rg32Sfloat`, even though we won't be using them as red and green channel data.
   This is one of those things where you just have to accept that bits are bits
   and the meaning is more what you make of it.
 
@@ -589,10 +583,10 @@ shader).
 ## Rasterization
 
 Once we have all of our geometry arranged, we need to translate the points into
-pixels on the screen. So we specify a [Rasterizer](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.Rasterizer.html):
+pixels on the screen. So we specify a [Rasterizer](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.Rasterizer.html):
 
 * `polygon_mode`: Pick a
-  [PolygonMode](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/enum.PolygonMode.html).
+  [PolygonMode](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/enum.PolygonMode.html).
   Usually you want `Fill`, though `Line` and `Point` are neat for "debug
   display" sorts of things. Or if you want to go for the "Tron" look.
 * `cull_face`: When you define a triangle, it's obviously got two sides (called
@@ -693,10 +687,6 @@ potentially discard a fragment.
 As you're probably getting sick of hearing at this point, we're not using depth
 testing right now.
 
-Note that there's two different structs called `DepthStencilDesc` in the
-`gfx-hal` crate. The one in the `image` module is deprecated old nonsense, we
-want to be sure to import the one from the `pso` module.
-
 ```rust
       let depth_stencil = DepthStencilDesc {
         depth: DepthTest::Off,
@@ -746,7 +736,7 @@ We need to define
 * `viewport`: Defines part of the whole
   [viewport](https://renderdoc.org/vkspec_chunked/chap25.html#vertexpostproc-viewport)
   process. Right now `gfx-hal` doesn't support more than one viewport, but it's
-  on the list of TODOs for 0.2.
+  on the list of TODOs for a future version.
 * `scissor`: Defines the params for the [scissor
   test](https://renderdoc.org/vkspec_chunked/chap27.html#fragops-scissor), which
   takes in 2d framebuffer coordinates and cancels a fragment if it falls outside
@@ -797,9 +787,9 @@ doing it here.
 We can finally, _finally_ make that graphics pipeline. We use all the stuff
 declared so far, and a few more filler arguments that are unimportant to us
 right now, to make a
-[GraphicsPipelineDesc](https://docs.rs/gfx-hal/0.1.0/gfx_hal/pso/struct.GraphicsPipelineDesc.html).
+[GraphicsPipelineDesc](https://docs.rs/gfx-hal/0.2/gfx_hal/pso/struct.GraphicsPipelineDesc.html).
 That gets passed to
-[Device::create_graphics_pipeline](https://docs.rs/gfx-hal/0.1.0/gfx_hal/device/trait.Device.html#method.create_graphics_pipeline).
+[Device::create_graphics_pipeline](https://docs.rs/gfx-hal/0.2/gfx_hal/device/trait.Device.html#method.create_graphics_pipeline).
 We could optionally specify a pipeline cache too, but we don't have such a thing
 yet.
 

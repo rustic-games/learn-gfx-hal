@@ -28,11 +28,11 @@ use gfx_hal::{
         ColorMask, DepthStencilDesc, DepthTest, DescriptorSetLayoutBinding, Element, EntryPoint,
         Face, Factor, FrontFace, GraphicsPipelineDesc, GraphicsShaderSet, InputAssemblerDesc,
         LogicOp, PipelineCreationFlags, PipelineStage, PolygonMode, Rasterizer, Rect,
-        ShaderStageFlags, Specialization, StencilTest, VertexBufferDesc, Viewport,
+        ShaderStageFlags, Specialization, StencilTest, VertexBufferDesc, VertexInputRate, Viewport,
     },
     queue::{family::QueueGroup, Submission},
-    window::{Backbuffer, Extent2D, FrameSync, PresentMode, Swapchain, SwapchainConfig},
-    Backend, Gpu, Graphics, Instance, Primitive, QueueFamily, Surface,
+    window::{Extent2D, PresentMode, Swapchain, SwapchainConfig},
+    Backend, Features, Gpu, Graphics, Instance, Primitive, QueueFamily, Surface,
 };
 use winit::{
     dpi::LogicalSize, CreationError, Event, EventsLoop, Window, WindowBuilder, WindowEvent,
@@ -127,7 +127,7 @@ impl HalState {
             let Gpu { device, mut queues } = unsafe {
                 adapter
                     .physical_device
-                    .open(&[(&queue_family, &[1.0; 1])])
+                    .open(&[(&queue_family, &[1.0; 1])], Features::empty())
                     .map_err(|_| "Couldn't open the PhysicalDevice!")?
             };
             let queue_group = queues
@@ -142,13 +142,13 @@ impl HalState {
         };
 
         // Create A Swapchain, this is extra long
-        let (swapchain, extent, backbuffer, format, frames_in_flight) = {
-            let (caps, preferred_formats, present_modes, composite_alphas) =
+        let (swapchain, extent, images, format, frames_in_flight) = {
+            let (caps, preferred_formats, present_modes) =
                 surface.compatibility(&adapter.physical_device);
             info!("{:?}", caps);
             info!("Preferred Formats: {:?}", preferred_formats);
             info!("Present Modes: {:?}", present_modes);
-            info!("Composite Alphas: {:?}", composite_alphas);
+            info!("Composite Alphas: {:?}", caps.composite_alpha);
             //
             let present_mode = {
                 use gfx_hal::window::PresentMode::*;
@@ -159,12 +159,17 @@ impl HalState {
                     .ok_or("No PresentMode values specified!")?
             };
             let composite_alpha = {
-                use gfx_hal::window::CompositeAlpha::*;
-                [Opaque, Inherit, PreMultiplied, PostMultiplied]
-                    .iter()
-                    .cloned()
-                    .find(|ca| composite_alphas.contains(ca))
-                    .ok_or("No CompositeAlpha values specified!")?
+                use gfx_hal::window::CompositeAlpha;
+                [
+                    CompositeAlpha::OPAQUE,
+                    CompositeAlpha::INHERIT,
+                    CompositeAlpha::PREMULTIPLIED,
+                    CompositeAlpha::POSTMULTIPLIED,
+                ]
+                .iter()
+                .cloned()
+                .find(|ca| caps.composite_alpha.contains(*ca))
+                .ok_or("No CompositeAlpha values specified!")?
             };
             let format = match preferred_formats {
                 None => Format::Rgba8Srgb,
@@ -216,12 +221,12 @@ impl HalState {
             };
             info!("{:?}", swapchain_config);
             //
-            let (swapchain, backbuffer) = unsafe {
+            let (swapchain, images) = unsafe {
                 device
                     .create_swapchain(&mut surface, swapchain_config, None)
                     .map_err(|_| "Failed to create the swapchain!")?
             };
-            (swapchain, extent, backbuffer, format, image_count as usize)
+            (swapchain, extent, images, format, image_count as usize)
         };
 
         // Create Our Sync Primitives
@@ -280,27 +285,24 @@ impl HalState {
         };
 
         // Create The ImageViews
-        let image_views: Vec<_> = match backbuffer {
-            Backbuffer::Images(images) => images
-                .into_iter()
-                .map(|image| unsafe {
-                    device
-                        .create_image_view(
-                            &image,
-                            ViewKind::D2,
-                            format,
-                            Swizzle::NO,
-                            SubresourceRange {
-                                aspects: Aspects::COLOR,
-                                levels: 0..1,
-                                layers: 0..1,
-                            },
-                        )
-                        .map_err(|_| "Couldn't create the image_view for the image!")
-                })
-                .collect::<Result<Vec<_>, &str>>()?,
-            Backbuffer::Framebuffer(_) => unimplemented!("Can't handle framebuffer backbuffer!"),
-        };
+        let image_views: Vec<_> = images
+            .into_iter()
+            .map(|image| unsafe {
+                device
+                    .create_image_view(
+                        &image,
+                        ViewKind::D2,
+                        format,
+                        Swizzle::NO,
+                        SubresourceRange {
+                            aspects: Aspects::COLOR,
+                            levels: 0..1,
+                            layers: 0..1,
+                        },
+                    )
+                    .map_err(|_| "Couldn't create the image_view for the image!")
+            })
+            .collect::<Result<Vec<_>, &str>>()?;
 
         // Create Our FrameBuffers
         let framebuffers: Vec<<back::Backend as Backend>::Framebuffer> = {
@@ -394,7 +396,8 @@ impl HalState {
 
     #[allow(clippy::type_complexity)]
     fn create_pipeline(
-        device: &mut back::Device, extent: Extent2D,
+        device: &mut back::Device,
+        extent: Extent2D,
         render_pass: &<back::Backend as Backend>::RenderPass,
     ) -> Result<
         (
@@ -441,18 +444,12 @@ impl HalState {
                 EntryPoint {
                     entry: "main",
                     module: &vertex_shader_module,
-                    specialization: Specialization {
-                        constants: &[],
-                        data: &[],
-                    },
+                    specialization: Specialization::EMPTY,
                 },
                 EntryPoint {
                     entry: "main",
                     module: &fragment_shader_module,
-                    specialization: Specialization {
-                        constants: &[],
-                        data: &[],
-                    },
+                    specialization: Specialization::EMPTY,
                 },
             );
             let shaders = GraphicsShaderSet {
@@ -468,13 +465,13 @@ impl HalState {
             let vertex_buffers: Vec<VertexBufferDesc> = vec![VertexBufferDesc {
                 binding: 0,
                 stride: (size_of::<f32>() * 2) as u32,
-                rate: 0,
+                rate: VertexInputRate::Vertex,
             }];
             let attributes: Vec<AttributeDesc> = vec![AttributeDesc {
                 location: 0,
                 binding: 0,
                 element: Element {
-                    format: Format::Rg32Float,
+                    format: Format::Rg32Sfloat,
                     offset: 0,
                 },
             }];
@@ -583,9 +580,9 @@ impl HalState {
         self.current_frame = (self.current_frame + 1) % self.frames_in_flight;
 
         let (i_u32, i_usize) = unsafe {
-            let image_index = self
+            let (image_index, _) = self
                 .swapchain
-                .acquire_image(core::u64::MAX, FrameSync::Semaphore(image_available))
+                .acquire_image(core::u64::MAX, Some(image_available), None)
                 .map_err(|_| "Couldn't acquire an image from the swapchain!")?;
             (image_index, image_index as usize)
         };
@@ -631,6 +628,7 @@ impl HalState {
             the_command_queue.submit(submission, Some(flight_fence));
             self.swapchain
                 .present(the_command_queue, i_u32, present_wait_semaphores)
+                .map(|_| ())
                 .map_err(|_| "Failed to present into the swapchain!")
         }
     }
@@ -643,9 +641,9 @@ impl HalState {
         self.current_frame = (self.current_frame + 1) % self.frames_in_flight;
 
         let (i_u32, i_usize) = unsafe {
-            let image_index = self
+            let (image_index, _) = self
                 .swapchain
-                .acquire_image(core::u64::MAX, FrameSync::Semaphore(image_available))
+                .acquire_image(core::u64::MAX, Some(image_available), None)
                 .map_err(|_| "Couldn't acquire an image from the swapchain!")?;
             (image_index, image_index as usize)
         };
@@ -713,6 +711,7 @@ impl HalState {
             the_command_queue.submit(submission, Some(flight_fence));
             self.swapchain
                 .present(the_command_queue, i_u32, present_wait_semaphores)
+                .map(|_| ())
                 .map_err(|_| "Failed to present into the swapchain!")
         }
     }
