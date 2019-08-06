@@ -248,7 +248,7 @@ values are defined.
       let vertex_buffers: Vec<VertexBufferDesc> = vec![VertexBufferDesc {
         binding: 0,
         stride: (size_of::<f32>() * 5) as ElemStride,
-        rate: 0,
+        rate: VertexInputRate::Vertex,
       }];
       let position_attribute = AttributeDesc {
         location: 0,
@@ -312,10 +312,12 @@ a uniform buffer. The biggest difference is that push constants can be assumed
 to be significantly faster to update (because of where their physical memory is
 on the GPU's card), and also they are somewhat easier to use (because there's no
 faffing about with buffers), but you only get a _very_ limited amount of push
-constant space. With `gfx-hal` you can only use 128 **bytes** of push constant
-space. The Vulkan spec assures that you have at least that much, and many
-cards offer more these days, but currently `gfx-hal` has no way to ask the
-graphics card exactly how much it supports. It's on the TODO list for 0.2.
+constant space. The Vulkan spec assures that you have at least 128 **bytes**,
+and many cards offer more these days. You can use the
+[`max_push_constant_size`](https://docs.rs/gfx-hal/0.2/gfx_hal/struct.Limits.html#structfield.max_push_constants_size)
+attribute on the graphic device
+[`Limits`](https://docs.rs/gfx-hal/0.2/gfx_hal/struct.Limits.html) details to
+programatically determine how much space you have available.
 
 As a demo of how to use push constants, we'll record a `std::time::Instant` at
 the creation of our `HalState` and then use the time since that Instant to shift
